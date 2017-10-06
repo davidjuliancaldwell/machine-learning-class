@@ -5,7 +5,7 @@ import seaborn as sns
 sns.set()
 
 # part A
-n_ind = 16000
+n_ind = 40000
 plt.figure()
 Z = np.random.randn(n_ind)
 plt.step(sorted(Z), np.arange(1,n_ind+1)/float(n_ind),label = 'n = ' + str(n_ind))
@@ -22,7 +22,7 @@ plt.savefig('hw0_programming_plot_a.png')
 
 # part b
 plt.figure()
-n = 16000
+n = 40000
 Z = np.random.randn(n_ind)
 plt.step(sorted(Z), np.arange(1,n_ind+1)/float(n_ind),label='Gaussian')
 
