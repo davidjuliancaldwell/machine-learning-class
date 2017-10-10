@@ -1,6 +1,9 @@
 # image files
 *.png
 
+# mnist database
+python-mnist
+
 # ds store
 *.DS_Store
 
