@@ -7,8 +7,9 @@ import mnist
 sns.set()
 
 # data loading function
+# data loading function
 def load_dataset():
-    mndata = mnist.MNIST('./python-mnist/data/')
+    mndata = mnist.MNIST('./python-mnist/data')
     X_train, labels_train = map(np.array, mndata.load_training())
     X_test, labels_test = map(np.array, mndata.load_testing())
     X_train = X_train/255.0
@@ -17,14 +18,19 @@ def load_dataset():
 
 # training function
 def train(x,y,lambda_cnst):
-    a = (np.dot(x.T,x)) + lambda_cnst*np.identity(np.shape(x)[1])
-    b = (np.dot(x.T,y))
+    #a = (np.dot(x.T,x)) + lambda_cnst*np.identity(np.shape(x)[1])
+    #b = (np.dot(x.T,y))
+    x = x.T
+    y = y.T
+    a = (np.dot(x,x.T)) + lambda_cnst*np.identity(np.shape(x)[0])
+    b = (np.dot(x,y.T))
     w_hat = np.linalg.solve(a,b)
     return w_hat
 
 # prediction function
 def predict(w,x_prime):
-    classified = np.argmax(np.dot(x_prime,w),axis=1)
+    #classified = np.argmax(np.dot(x_prime,w),axis=1)
+    classified = np.argmax(np.dot(w.T,x_prime.T),axis=0)
     return classified
 
 # evaluate performance
@@ -32,6 +38,7 @@ def evaluate(results,truth):
     truth_array = np.array(truth)
     results_array = np.array(results)
     accuracy = np.sum(truth_array==results_array)/len(truth_array)
+    #import pdb; pdb.set_trace()
     return accuracy
 
 def feature_transform_old(pixels,p):
@@ -80,6 +87,7 @@ def random_partition(data,labels_onehot,labels,proportion):
     validation_set = data[valid_inds,:]
     validation_onehot_labels = labels_onehot[valid_inds,:]
     validation_labels = labels[valid_inds]
+    #import pdb; pdb.set_trace()
     return train_set,train_onehot_labels,train_labels,validation_set,validation_onehot_labels,validation_labels,inds,valid_inds
 
 x_train,x_test,labels_train,labels_test = load_dataset()
@@ -115,7 +123,7 @@ prop_train = 0.8
 train_s,train_ohl,train_l,valid_s,valid_ohl,valid_l,train_inds,valid_inds = random_partition(x_train,labels_onehot_train,labels_train,prop_train)
 
 #p_list = [10,100,500,1000,1500,2000,2500,3000,3500,4000,4500,5000,5500,6000]
-p_list = [10,100,200]
+p_list = [10,100,200,500,1000,1500,2000,2500,3000,3500,4000,4500,5000,5500,6000]
 
 train_error_vec = []
 valid_error_vec = []
@@ -148,7 +156,7 @@ fig1.savefig('hw1_prob7_errorPlot')
 # hoeffding's , using p from above
 
 # optimal p
-p = 200
+p = 6000
 
 train_s_trans = feature_transform(train_s,p)
 w_hat = train(train_s_trans,train_ohl,lambda_cnst)
