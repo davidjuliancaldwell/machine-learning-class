@@ -32,16 +32,18 @@ def split(data,labels):
     train_d = data[0:n_train,:]
     train_l = labels[0:n_train]
 
+    outlier = False
+
+    if outlier:
     # get rid of outliers
-    ind_outlier = np.argmax(train_l)
-    #ind_outlier = np.argmax(np.max(np.abs(train_d),axis=1))
-    #ind_outlier = np.argpartition(np.max(np.abs(train_d),axis=1),-10)[-10:]
+        ind_outlier = np.argmax(train_l)
+        #ind_outlier = np.argmax(np.max(np.abs(train_d),axis=1))
+        #ind_outlier = np.argpartition(np.max(np.abs(train_d),axis=1),-10)[-10:]
 
-    mask_good = np.ones((np.shape(train_d)[0],),dtype=bool)
-    mask_good[ind_outlier] = False
-    train_d = train_d[mask_good,:]
-    train_l = train_l[mask_good]
-
+        mask_good = np.ones((np.shape(train_d)[0],),dtype=bool)
+        mask_good[ind_outlier] = False
+        train_d = train_d[mask_good,:]
+        train_l = train_l[mask_good]
     # demean!
     demean= True
     if demean:
