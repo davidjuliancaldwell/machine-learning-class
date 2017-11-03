@@ -60,7 +60,7 @@ def gradient_method(X,y,X_test,y_test,lambda_val):
 
     k = 0
     #step_size = 1e-3
-    step_size = 3e-2
+    step_size = 5e-3
     criteria_conv = 0.000004
 
 
@@ -177,7 +177,7 @@ def gradient_method(X,y,X_test,y_test,lambda_val):
 
     return j_train_vec,j_test_vec,w_vec,b_vec,k_vec,test_classify_vec,train_classify_vec
 
-# implement stochastic gradient descent, batch_size determines how many examples are in each run. 
+# implement stochastic gradient descent, batch_size determines how many examples are in each run.
 def SGD(X,y,X_test,y_test,lambda_val,batch_size):
     not_conv = True
     j_train_vec = []
@@ -189,16 +189,16 @@ def SGD(X,y,X_test,y_test,lambda_val,batch_size):
     test_classify_vec = []
 
     k = 0
-    step_size = 1e-3
+    step_size = 6e-3
     #step_size = 1e-3
     criteria_conv = 0.004
 
     w = np.zeros((np.shape(X)[1],))
     b = 0
-    
+
     ##### gradient descent batch size choice
     batch_range = np.arange(np.shape(X)[0])
-    
+
     n = np.float(np.shape(X)[0])
     batch_size= np.float(batch_size)
     lambda_val = np.float(lambda_val)
@@ -207,8 +207,8 @@ def SGD(X,y,X_test,y_test,lambda_val,batch_size):
 
     n_features = np.shape(X)[1]
     n_test = np.shape(X_test)[0]
-    
-    cost_mu = 1+np.exp(-y*(b+np.dot(X,w)))     
+
+    cost_mu = 1+np.exp(-y*(b+np.dot(X,w)))
     j_train = (1/n)*(np.sum(np.log(cost_mu))) + lambda_val*np.dot(w.T,w)
     #print('the value of j train is {}'.format(j_train))
 
@@ -222,7 +222,7 @@ def SGD(X,y,X_test,y_test,lambda_val,batch_size):
     j_test_vec.append(j_test)
 
 
-    ###       
+    ###
     w_vec.append(w)
     b_vec.append(b)
 
@@ -241,22 +241,22 @@ def SGD(X,y,X_test,y_test,lambda_val,batch_size):
 
     train_classify_vec.append(train_classify_error)
     test_classify_vec.append(test_classify_error)
-    
+
     w_old = w[:]
     b_old = copy.copy(b)
 
     while not_conv:
         # stochastic choice
         np.random.shuffle(batch_range)
-        for i in np.arange(n/batch_size): 
+        for i in np.arange(n/batch_size):
             inds_choose = batch_range[int(i*batch_size):(int(i*batch_size)+int(batch_size))]
             #inds_choose = np.random.choice(batch_range,size=batch_size,replace=False)
             X_sub = X[inds_choose,:]
             y_sub = y[inds_choose]
-            ##### training part 
+            ##### training part
             #mu_vec = [1/(1+np.exp(-y[i]*(b+np.dot(X[i,:].T,w)))) for i in range_vec]
             #cost_mu = [(1+np.exp(-y[i]*(b+np.dot(X[i,:].T,w)))) for i in range_vec]
-            mu_vec = 1/(1+np.exp(-y_sub*(b+np.dot(X_sub,w)))) 
+            mu_vec = 1/(1+np.exp(-y_sub*(b+np.dot(X_sub,w))))
 
             #g_w = (1/n)*np.dot(X.T,(mu_vec - y)) + 2*lambda_val*w
             #g_b = (1/n)*np.sum(mu_vec-y)
@@ -264,20 +264,20 @@ def SGD(X,y,X_test,y_test,lambda_val,batch_size):
             #g_w = (1/batch_size)*(np.dot(X_sub.T,(-y_sub*(1-mu_vec)))) + 2*lambda_val*w
             g_w = (1/batch_size)*(np.dot(X_sub.T,(-y_sub*(1-mu_vec))))+ (
                 2*lambda_val*w_old)
-            
+
             #g_w[np.abs(g_w)<1e-15] = 0
-            
+
             g_b = (1/batch_size)*np.sum(-y_sub*(1-mu_vec))
 
-            # 
+            #
             w = w_old - step_size*g_w
             b = b_old - step_size*g_b
-            
-            
+
+
             #w = np.array(w)
             w_old = w[:]
             b_old = copy.copy(b)
-            
+
             delta_w = np.abs(w-w_old)
             delta_b = np.abs(b-b_old)
 
@@ -318,8 +318,8 @@ def SGD(X,y,X_test,y_test,lambda_val,batch_size):
 
             # check convergence
            # if ((1/n_features)*np.sum(delta_w))<criteria_conv and k>1:
-            if k>1000:
-            #if k>3000:    
+            if k>800:
+            #if k>3000:
                 not_conv = False
                 return j_train_vec,j_test_vec,w_vec,b_vec,k_vec,test_classify_vec,train_classify_vec
 
@@ -347,7 +347,7 @@ def newton_method(X,y,X_test,y_test,lambda_val):
     k = 1
     #step_size = 1e-3
     step_size = 1
-    criteria_conv = 0.004
+    criteria_conv = 0.00004
 
     w = np.zeros((np.shape(X)[1],))
     b = 0
@@ -479,7 +479,32 @@ def newton_method(X,y,X_test,y_test,lambda_val):
 def plot_objective_train_test(k_vec,j_train_vec,j_test_vec,train_classify_vec,test_classify_vec,titl_1):
 
     # plot the cost function vs. iteration
-    plt.figure(figsize=(4, 4), dpi=600)
+    plt.figure(figsize=(5, 5), dpi=600)
+    plt.plot(k_vec[1:],j_train_vec[1:],label='training')
+    plt.plot(k_vec[1:],j_test_vec[1:],label='testing')
+    plt.xlabel('iteration number')
+    plt.ylabel('cost function')
+    plt.title(titl_1 + 'Cost function vs. iteration \n starting on 2nd iteration')
+    plt.legend()
+    index = np.argmin(j_train_vec)
+    k_best = k_vec[index]
+    w_best = w_vec[index]
+    titl_1_save = titl_1[:-2]
+    titl_1_save = titl_1_save.replace(" ","_")
+    plt.savefig(titl_1_save + 'cost_func')
+
+    # plot the misclassification error vs. iteration
+    plt.figure(figsize=(5, 5), dpi=600)
+    plt.plot(k_vec[1:],train_classify_vec[1:],label='training data')
+    plt.plot(k_vec[1:],test_classify_vec[1:],label='test data')
+    plt.xlabel('iteration number')
+    plt.ylabel('misclassification error')
+    plt.title(titl_1 + 'Misclassification error vs. iteration number \n starting on 2nd iteration')
+    plt.legend()
+    plt.savefig(titl_1_save + 'mis_class_error')
+
+    # plot the cost function vs. iteration
+    plt.figure(figsize=(5, 5), dpi=600)
     plt.plot(k_vec,j_train_vec,label='training')
     plt.plot(k_vec,j_test_vec,label='testing')
     plt.xlabel('iteration number')
@@ -491,17 +516,17 @@ def plot_objective_train_test(k_vec,j_train_vec,j_test_vec,train_classify_vec,te
     w_best = w_vec[index]
     titl_1_save = titl_1[:-2]
     titl_1_save = titl_1_save.replace(" ","_")
-    plt.savefig(titl_1_save + 'cost_func')
+    plt.savefig(titl_1_save + 'cost_func_0')
 
     # plot the misclassification error vs. iteration
-    plt.figure(figsize=(4, 4), dpi=600)
+    plt.figure(figsize=(5, 5), dpi=600)
     plt.plot(k_vec,train_classify_vec,label='training data')
     plt.plot(k_vec,test_classify_vec,label='test data')
     plt.xlabel('iteration number')
     plt.ylabel('misclassification error')
     plt.title(titl_1 + 'Misclassification error vs. iteration number')
     plt.legend()
-    plt.savefig(titl_1_save + 'mis_class_error')
+    plt.savefig(titl_1_save + 'mis_class_error_0')
 
 ### load and convert data
 
