@@ -76,7 +76,7 @@ def gradient_method(X,y,X_test,y_test,lambda_val):
 
     # calculate cost function on training
     j_train = (1/n)*(np.sum(np.log(cost_mu))) + lambda_val*np.dot(w.T,w)
-    print('the value of j train is {}'.format(j_train))
+    #print('the value of j train is {}'.format(j_train))
 
     ####### testing part
     cost_mu_test = 1+np.exp(-y_test.T*(b+np.dot(X_test,w)))
@@ -173,11 +173,11 @@ def gradient_method(X,y,X_test,y_test,lambda_val):
             not_conv = True
             k += 1
 
-        print('the value of j train is {}'.format(j_train))
+        #print('the value of j train is {}'.format(j_train))
 
     return j_train_vec,j_test_vec,w_vec,b_vec,k_vec,test_classify_vec,train_classify_vec
 
-# implement stochastic gradient descent, batch_size determines how many examples are in each run.
+# implement stochastic gradient descent, batch_size determines how many examples are in each run. 
 def SGD(X,y,X_test,y_test,lambda_val,batch_size):
     not_conv = True
     j_train_vec = []
@@ -189,26 +189,31 @@ def SGD(X,y,X_test,y_test,lambda_val,batch_size):
     test_classify_vec = []
 
     k = 0
+    step_size = 1e-3
     #step_size = 1e-3
-    step_size = 5e-2
     criteria_conv = 0.004
 
     w = np.zeros((np.shape(X)[1],))
     b = 0
-
+    
     ##### gradient descent batch size choice
-    batch_range =np.arange(np.shape(X)[0])
+    batch_range = np.arange(np.shape(X)[0])
+    
+    n = np.float(np.shape(X)[0])
+    batch_size= np.float(batch_size)
+    lambda_val = np.float(lambda_val)
+    lambda_val_scale = lambda_val*batch_size/n
 
-    n = np.shape(X)[0]
+
     n_features = np.shape(X)[1]
     n_test = np.shape(X_test)[0]
-
-    cost_mu = 1+np.exp(-y.T*(b+np.dot(X,w)))
+    
+    cost_mu = 1+np.exp(-y*(b+np.dot(X,w)))     
     j_train = (1/n)*(np.sum(np.log(cost_mu))) + lambda_val*np.dot(w.T,w)
-    print('the value of j train is {}'.format(j_train))
+    #print('the value of j train is {}'.format(j_train))
 
     ####### testing part
-    cost_mu_test = 1+np.exp(-y_test.T*(b+np.dot(X_test,w)))
+    cost_mu_test = 1+np.exp(-y_test*(b+np.dot(X_test,w)))
 
     j_test = (1/n_test)*(np.sum(np.log(cost_mu_test))) + lambda_val*np.dot(w.T,w)
 
@@ -217,7 +222,7 @@ def SGD(X,y,X_test,y_test,lambda_val,batch_size):
     j_test_vec.append(j_test)
 
 
-    ###
+    ###       
     w_vec.append(w)
     b_vec.append(b)
 
@@ -236,81 +241,96 @@ def SGD(X,y,X_test,y_test,lambda_val,batch_size):
 
     train_classify_vec.append(train_classify_error)
     test_classify_vec.append(test_classify_error)
-
-    w_old = copy.copy(w)
+    
+    w_old = w[:]
     b_old = copy.copy(b)
 
     while not_conv:
         # stochastic choice
         np.random.shuffle(batch_range)
-        inds_choose = np.random.choice(batch_range,size=batch_size,replace=False)
-        X_sub = X[inds_choose,:]
-        y_sub = y[inds_choose]
-        ##### training part
-        #mu_vec = [1/(1+np.exp(-y[i]*(b+np.dot(X[i,:].T,w)))) for i in range_vec]
-        #cost_mu = [(1+np.exp(-y[i]*(b+np.dot(X[i,:].T,w)))) for i in range_vec]
-        mu_vec = 1/(1+np.exp(-y_sub.T*(b+np.dot(X_sub,w))))
+        for i in np.arange(n/batch_size): 
+            inds_choose = batch_range[int(i*batch_size):(int(i*batch_size)+int(batch_size))]
+            #inds_choose = np.random.choice(batch_range,size=batch_size,replace=False)
+            X_sub = X[inds_choose,:]
+            y_sub = y[inds_choose]
+            ##### training part 
+            #mu_vec = [1/(1+np.exp(-y[i]*(b+np.dot(X[i,:].T,w)))) for i in range_vec]
+            #cost_mu = [(1+np.exp(-y[i]*(b+np.dot(X[i,:].T,w)))) for i in range_vec]
+            mu_vec = 1/(1+np.exp(-y_sub*(b+np.dot(X_sub,w)))) 
 
-        #g_w = (1/n)*np.dot(X.T,(mu_vec - y)) + 2*lambda_val*w
-        #g_b = (1/n)*np.sum(mu_vec-y)
+            #g_w = (1/n)*np.dot(X.T,(mu_vec - y)) + 2*lambda_val*w
+            #g_b = (1/n)*np.sum(mu_vec-y)
 
-        g_w = (1/batch_size)*(np.dot(X_sub.T,(-y_sub*(1-mu_vec)))) + 2*lambda_val*w
-        #g_w = (1/batch_size)*(np.dot(X_sub.T,(-y_sub*(1-mu_vec)))) + 2*(batch_size/n)*lambda_val*w
-        g_b = (1/batch_size)*np.sum(-y_sub*(1-mu_vec))
+            #g_w = (1/batch_size)*(np.dot(X_sub.T,(-y_sub*(1-mu_vec)))) + 2*lambda_val*w
+            g_w = (1/batch_size)*(np.dot(X_sub.T,(-y_sub*(1-mu_vec))))+ (
+                2*lambda_val*w_old)
+            
+            #g_w[np.abs(g_w)<1e-15] = 0
+            
+            g_b = (1/batch_size)*np.sum(-y_sub*(1-mu_vec))
 
-        #
-        w = w_old - step_size*g_w
-        b = b_old - step_size*g_b
+            # 
+            w = w_old - step_size*g_w
+            b = b_old - step_size*g_b
+            
+            
+            #w = np.array(w)
+            w_old = w[:]
+            b_old = copy.copy(b)
+            
+            delta_w = np.abs(w-w_old)
+            delta_b = np.abs(b-b_old)
 
-        cost_mu = 1+np.exp(-y.T*(b+np.dot(X,w)))
-        j_train = (1/n)*(np.sum(np.log(cost_mu))) + lambda_val*np.dot(w.T,w)
-        print('the value of j train is {}'.format(j_train))
+            cost_mu = 1+np.exp(-y*(b+np.dot(X,w)))
+            j_train = (1/n)*(np.sum(np.log(cost_mu))) + lambda_val*np.dot(w.T,w)
+            #print('the value of j train is {}'.format(j_train))
 
-        ####### testing part
+            ####### testing part
 
-        cost_mu_test = 1+np.exp(-y_test.T*(b+np.dot(X_test,w)))
+            cost_mu_test = 1+np.exp(-y_test*(b+np.dot(X_test,w)))
 
-        j_test = (1/n_test)*(np.sum(np.log(cost_mu_test))) + lambda_val*np.dot(w.T,w)
+            j_test = (1/n_test)*(np.sum(np.log(cost_mu_test))) + lambda_val*np.dot(w.T,w)
 
-        w_vec.append(w)
-        b_vec.append(b)
+            w_vec.append(w[:])
+            b_vec.append(b)
 
-        k_vec.append(k)
-        j_train_vec.append(j_train)
-        j_test_vec.append(j_test)
+            k_vec.append(k)
+            j_train_vec.append(j_train)
+            j_test_vec.append(j_test)
 
-        #### classification
-        train_signed = (b+np.dot(X,w))
-        test_signed = (b+np.dot(X_test,w))
+            #### classification
+            train_signed = (b+np.dot(X,w))
+            test_signed = (b+np.dot(X_test,w))
 
-        train_data_class = np.sign(train_signed)
-        test_data_class = np.sign(test_signed)
+            train_data_class = np.sign(train_signed)
+            test_data_class = np.sign(test_signed)
 
-        train_classify_error_vec = [train_data_class != y]
-        test_classify_error_vec = [test_data_class != y_test]
+            train_classify_error_vec = [train_data_class != y]
+            test_classify_error_vec = [test_data_class != y_test]
 
-        train_classify_error = np.sum(train_classify_error_vec)/n
-        test_classify_error = np.sum(test_classify_error_vec)/n_test
+            train_classify_error = np.sum(train_classify_error_vec)/n
+            test_classify_error = np.sum(test_classify_error_vec)/n_test
 
-        train_classify_vec.append(train_classify_error)
-        test_classify_vec.append(test_classify_error)
+            train_classify_vec.append(train_classify_error)
+            test_classify_vec.append(test_classify_error)
+            #if k == 600:
+            #    import pdb;pdb.set_trace()
 
-        delta_w = np.abs(w-w_old)
-        delta_b = np.abs(b-b_old)
+            # check convergence
+           # if ((1/n_features)*np.sum(delta_w))<criteria_conv and k>1:
+            if k>1000:
+            #if k>3000:    
+                not_conv = False
+                return j_train_vec,j_test_vec,w_vec,b_vec,k_vec,test_classify_vec,train_classify_vec
 
-        #w = np.array(w)
-        w_old = copy.copy(w)
-        b_old = copy.copy(b)
-        # check convergence
-       # if ((1/n_features)*np.sum(delta_w))<criteria_conv and k>1:
-        if k>200:
-            not_conv = False
 
-        else:
-            not_conv = True
-            k += 1
+            else:
+                not_conv = True
+                k += 1
 
     return j_train_vec,j_test_vec,w_vec,b_vec,k_vec,test_classify_vec,train_classify_vec
+
+
 
 # implement newton's method
 
@@ -341,7 +361,7 @@ def newton_method(X,y,X_test,y_test,lambda_val):
 
     cost_mu = 1+np.exp(-y.T*(b+np.dot(X,w)))
     j_train = (1/n)*(np.sum(np.log(cost_mu))) + lambda_val*np.dot(w.T,w)
-    print('the value of j train is {}'.format(j_train))
+    #print('the value of j train is {}'.format(j_train))
 
     ####### testing part
     cost_mu_test = 1+np.exp(-y_test.T*(b+np.dot(X_test,w)))
@@ -435,7 +455,7 @@ def newton_method(X,y,X_test,y_test,lambda_val):
         train_classify_vec.append(train_classify_error)
         test_classify_vec.append(test_classify_error)
 
-        print('the value of j train is {}'.format(j_train))
+        #print('the value of j train is {}'.format(j_train))
 
         delta_w = np.abs(w-w_old)
         delta_b = np.abs(b-b_old)
@@ -443,8 +463,6 @@ def newton_method(X,y,X_test,y_test,lambda_val):
         #w = np.array(w)
         w_old = copy.copy(w)
         b_old = copy.copy(b)
-
-        print((1/n_features)*np.sum(delta_w))
 
         # check convergence
         if ((1/n_features)*np.sum(delta_w))<criteria_conv and k>1:
