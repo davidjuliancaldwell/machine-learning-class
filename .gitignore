@@ -4,6 +4,9 @@
 # mnist database
 python-mnist
 
+# jester
+jester
+
 # ds store
 *.DS_Store
 
