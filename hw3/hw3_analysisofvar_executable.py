@@ -69,7 +69,7 @@ for params in params_int_zipped:
     plt.xlabel('x1')
     plt.ylabel('y1')
     plt.title('wstar=[{},{}], diag(Lambda) = [{},{}]'.format(w_star[0],w_star[1],lambda_1,lambda_2))
-    plt.savefig("hw3_prob1_iter_{}".format(iteration))
+    #plt.savefig("hw3_prob1_iter_{}".format(iteration))
     print(iteration)
-    #plt.show()
+    plt.show()
     iteration += 1

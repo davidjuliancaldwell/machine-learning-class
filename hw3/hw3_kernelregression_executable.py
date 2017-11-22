@@ -44,6 +44,52 @@ def kernel_eval_rbf(gamma,x_1,x_2):
         eval_kernel.append(eval_iter)
     return eval_kernel
 
+def bootstrap_poly(d,lambda_val,x,y,data,num_sets,num_pulls):
+    bootstrapped_examples = np.zeros((num_sets,data.shape[0]))
+    inds = np.arange(num_pulls)
+    for j in np.arange(num_sets):
+        inds_choice = np.random.choice(inds,num_pulls)
+        x_samp = x[inds_choice]
+        y_samp = y[inds_choice]
+
+        f_hat = np.zeros((data.shape))
+
+        K = make_K_mat_poly(x_samp,d)
+        alpha_hat = alpha_hat_compute(K,lambda_val,y_samp)
+
+        for i in np.arange(data.shape[0]):
+            eval_kernel = kernel_eval_poly(d,float(data[i]),x_samp)
+            predict_y = np.sum(alpha_hat.flatten()*np.array(eval_kernel))
+
+            f_hat[i] = predict_y
+
+        bootstrapped_examples[j,:] = f_hat
+
+    return bootstrapped_examples
+
+def bootstrap_rbf(gamma,lambda_val,x,y,data,num_sets,num_pulls):
+    bootstrapped_examples = np.zeros((num_sets,data.shape[0]))
+    inds = np.arange(num_pulls)
+    for j in np.arange(num_sets):
+        inds_choice = np.random.choice(inds,num_pulls)
+        x_samp = x[inds_choice]
+        y_samp = y[inds_choice]
+
+        f_hat = np.zeros((data.shape))
+
+        K = make_K_mat_rbf(x_samp,gamma)
+        alpha_hat = alpha_hat_compute(K,lambda_val,y_samp)
+
+        for i in np.arange(data.shape[0]):
+            eval_kernel = kernel_eval_rbf(gamma,float(data[i]),x_samp)
+            predict_y = np.sum(alpha_hat.flatten()*np.array(eval_kernel))
+
+            f_hat[i] = predict_y
+
+        bootstrapped_examples[j,:] = f_hat
+
+    return bootstrapped_examples
+
 def kernel_eval_poly(d,x_1,x_2):
 
     eval_kernel = []
@@ -181,7 +227,25 @@ def plot_function_rbf(x,y,x_cont,f_x,f_hat,kernel,lambda_val,gamma):
     plt.title('Data, f(x), and f_hat_x \n for kernel = {}, lambda = {}, gamma = {:.2f}'.format(kernel,lambda_val,gamma))
     plt.legend()
     plt.ylim([-5,5])
+
+
     plt.savefig('hw3_prob2_{}'.format(kernel))
+
+def plot_function_rbf_boot(x,y,x_cont,f_x,f_hat,kernel,lambda_val,gamma,lower,upper):
+    plt.figure(dpi=600)
+    plt.figure()
+    plt.plot(x,y,'o',label='original data with noise')
+    plt.plot(x_cont,f_x,label='true f(x)')
+    plt.plot(x_cont,f_hat,label='f_hat(x)')
+    plt.fill_between(x_cont,lower,upper,alpha=0.3,label='95% confidence interval')
+    plt.xlabel('x')
+    plt.ylabel('f(x) or y')
+    plt.title('Data, f(x), f_hat_x, and confidence interval \n for kernel = {}, lambda = {}, gamma = {:.2f}'.format(kernel,lambda_val,gamma))
+    plt.legend()
+    plt.ylim([-5,5])
+
+
+    plt.savefig('hw3_prob2_{}_boot'.format(kernel))
 
 def plot_function_poly(x,y,x_cont,f_x,f_hat,kernel,lambda_val,d):
     plt.figure(dpi=600)
@@ -196,6 +260,19 @@ def plot_function_poly(x,y,x_cont,f_x,f_hat,kernel,lambda_val,d):
     plt.ylim([-5,5])
     plt.savefig('hw3_prob2_{}'.format(kernel))
 
+def plot_function_poly_boot(x,y,x_cont,f_x,f_hat,kernel,lambda_val,d,lower,upper):
+    plt.figure(dpi=600)
+    plt.figure()
+    plt.plot(x,y,'o',label='original data with noise')
+    plt.plot(x_cont,f_x,label='true f(x)')
+    plt.plot(x_cont,f_hat,label='f_hat(x)')
+    plt.fill_between(x_cont,lower,upper,alpha=0.3,label='95% confidence interval')
+    plt.xlabel('x')
+    plt.ylabel('f(x) or y')
+    plt.title('Data, f(x), f_hat_x, and confidence interval \n for kernel = {}, lambda = {}, d = {}'.format(kernel,lambda_val,d))
+    plt.legend()
+    plt.ylim([-5,5])
+    plt.savefig('hw3_prob2_{}_boot'.format(kernel))
 
 #######################################
 
@@ -223,12 +300,42 @@ K = make_K_mat_poly(x,best_d)
 alpha_hat = alpha_hat_compute(K,best_lambda,y)
 
 for i in np.arange(x_cont.shape[0]):
-    eval_kernel = kernel_eval_poly(d,float(x_cont[i]),x)
+    eval_kernel = kernel_eval_poly(best_d,float(x_cont[i]),x)
     predict_y = np.sum(alpha_hat.flatten()*np.array(eval_kernel))
 
     f_hat[i] = predict_y
 
 plot_function_poly(x,y,x_cont,f_x,f_hat,'poly',best_lambda,best_d)
+
+# do stats for polynomial kernel
+
+# generate new data
+
+x_stat,y_stat,f_x_stat,x_cont_stat = generate_data()
+
+f_hat_stat_poly = np.zeros((x_stat.shape))
+
+K = make_K_mat_poly(x,best_d)
+alpha_hat = alpha_hat_compute(K,best_lambda,y)
+
+for i in np.arange(x_stat.shape[0]):
+    eval_kernel = kernel_eval_poly(best_d,float(x_cont[i]),x)
+    predict_y = np.sum(alpha_hat.flatten()*np.array(eval_kernel))
+
+    f_hat_stat_poly[i] = predict_y
+
+error_poly = (f_hat_stat_poly - y_stat)**2
+
+# bootstrap for polynomial
+
+num_sets = 300
+num_pulls = 30
+bootstrapped_examples_poly = bootstrap_poly(best_d,best_lambda,x,y,x_cont,num_sets,num_pulls)
+
+lower_poly,upper_poly = np.percentile(bootstrapped_examples_poly,[2.5,97.5],axis=0)
+
+kernel = 'poly'
+plot_function_poly_boot(x,y,x_cont,f_x,f_hat,kernel,best_lambda,best_d,lower_poly,upper_poly)
 
 ###############################
 
@@ -257,3 +364,42 @@ for i in np.arange(x_cont.shape[0]):
     f_hat[i] = predict_y
 
 plot_function_rbf(x,y,x_cont,f_x,f_hat,'rbf',best_lambda,best_gamma)
+
+######
+
+# now statistics for rbf kernel
+
+
+f_hat_stat_rbf = np.zeros((x_stat.shape))
+
+K = make_K_mat_rbf(x,best_gamma)
+alpha_hat = alpha_hat_compute(K,best_lambda,y)
+for i in np.arange(x_stat.shape[0]):
+    eval_kernel = kernel_eval_rbf(best_gamma,float(x_stat[i]),x)
+    predict_y = np.sum(alpha_hat.flatten()*np.array(eval_kernel))
+    f_hat_stat_rbf[i] = predict_y
+
+error_rbf = (f_hat_stat_rbf - y_stat)**2
+
+scipy.stats.ttest_ind(error_rbf,error_poly)
+
+np.mean(error_rbf)
+np.mean(error_poly)
+
+plt.figure(dpi=600)
+sns.distplot(error_rbf,label='rbf')
+sns.distplot(error_poly,label='poly')
+plt.xlabel('squared error')
+plt.ylabel('fraction of occurence')
+plt.legend()
+plt.title('Comparing the distribution of errors for the rbf and poly kernels')
+plt.savefig('hw3_kernel_statstest')
+
+# bootstrap rbf
+num_sets = 300
+num_pulls = 30
+bootstrapped_examples_rbf = bootstrap_rbf(best_gamma,best_lambda,x,y,x_cont,num_sets,num_pulls)
+
+lower_rbf,upper_rbf = np.percentile(bootstrapped_examples_poly,[2.5,97.5],axis=0)
+kernel = 'rbf'
+plot_function_rbf_boot(x,y,x_cont,f_x,f_hat,kernel,best_lambda,best_gamma,lower_poly,upper_poly)
