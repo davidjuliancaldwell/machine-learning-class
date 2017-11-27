@@ -4,6 +4,9 @@
 # mnist database
 python-mnist
 
+# data file hw4
+/hw4/data
+
 # jester
 jester
 
