@@ -252,10 +252,10 @@ D = np.zeros((n-1,n))
 for i in np.arange(D.shape[0]):
     for j in np.arange(D.shape[1]):
         if i == j:
-            D[i,j] = 1.0
+            D[i,j] = -1.0
 
         elif i == j - 1:
-            D[i,j] = -1.0
+            D[i,j] = 1.0
 
 x_i = np.expand_dims(x_i,axis=1)
 #y = np.expand_dims(y,axis=1)
@@ -267,10 +267,10 @@ D_LOOCV = np.zeros((n-2,n-1))
 for i in np.arange(D.shape[0]):
     for j in np.arange(D.shape[1]):
         if i == j:
-            D[i,j] = 1.0
+            D[i,j] = -1.0
 
         elif i == j - 1:
-            D[i,j] = -1.0
+            D[i,j] = 1.0
 
 
 ########################################################################
@@ -383,10 +383,9 @@ plotMany = True
 if plotMany:
 
     #lambda_vec = [1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,10]
-    lambda_vec = [1e-6]
-    gamma = best_gamma
-    gamma =40
-    K = make_K_mat_rbf(x_i,gamma)
+    lambda_vec = [1e-6,1e-4,1e-2]
+    gamma_vec = [5,10,20,40]
+
 
     loss_funcs = ['least_squares','huber','non_decrease']
     #loss_funcs = ['non_decrease']
@@ -395,34 +394,75 @@ if plotMany:
 
         for lambda_val in lambda_vec:
 
-            alpha = Variable(n)
+            for gamma_val in gamma_vec:
 
-            if loss_func == 'least_squares':
-                cost = sum_squares(y - K*alpha) + lambda_val*quad_form(alpha,K)
+                alpha = Variable(n)
+                K = make_K_mat_rbf(x_i,gamma_val)
+
+
+                if loss_func == 'least_squares':
+                    cost = sum_squares(y - K*alpha) + lambda_val*quad_form(alpha,K)
+                    objective = Minimize(cost)
+                    prob = Problem(objective)
+
+                elif loss_func == 'huber':
+                    cost = sum_entries(huber(y - K.T*alpha, 0.01)) + lambda_val*quad_form(alpha,K)
+                    objective = Minimize(cost)
+                    prob = Problem(objective)
+
+                elif loss_func == 'non_decrease':
+                    cost = sum_squares(K*alpha - y) + lambda_val*quad_form(alpha,K)
+                    objective = Minimize(cost)
+                    constraints = [(0 <= (np.dot(D,K)*alpha))]
+                    prob = Problem(objective,constraints)
+
+                result = prob.solve()
+                alpha_hat = alpha.value
+
+                f_hat = np.zeros((x_i_cont.shape))
+
+                for i in np.arange(x_i_cont.shape[0]):
+                    eval_kernel = kernel_eval_rbf(gamma_val,float(x_i_cont[i]),x_i)
+                    predict_y = np.sum(alpha_hat.A1.T*np.array(eval_kernel))
+                    f_hat[i] = predict_y
+
+                plot_function(x_i,y,x_i_cont,f_x_cont,f_hat,loss_func,lambda_val,gamma_val)
+########################################################################
+
+# %%
+### plot a whole bunch of TV
+loss_func = 'total_var'
+lambda1_vec = np.array([1e-5,1e-1])
+lambda2_vec = np.array([1e-5,1e-1])
+gamma = choose_gamma(x_i)
+
+#gamma_vec = np.arange(gamma-10,gamma+30,10)
+gamma_vec = np.array([10,40])
+
+#loss_func = 'least_squares'
+for lambda1_val in lambda1_vec:
+
+    for lambda2_val in lambda2_vec:
+
+        for gamma_val in gamma_vec:
+            print('lambda1 = {},lambda2 = {},gamma = {}'.format(lambda1_val,lambda2_val,gamma_val))
+
+            for valid_ind in np.arange(y.shape[0]):
+
+                f_hat = np.zeros((x_i_cont.shape))
+                K = make_K_mat_rbf(x_i,gamma_val)
+                alpha = Variable(n)
+                ### cost function
+                cost = sum_squares(y - K*alpha) + lambda1_val*norm((np.dot(D,K)*alpha),1) + lambda2_val*quad_form(alpha,K)
+
                 objective = Minimize(cost)
                 prob = Problem(objective)
+                result = prob.solve()
+                alpha_hat = alpha.value
 
-            elif loss_func == 'huber':
-                cost = sum_entries(huber(y - K.T*alpha, 0.01)) + lambda_val*quad_form(alpha,K)
-                objective = Minimize(cost)
-                prob = Problem(objective)
+                for i in np.arange(x_i_cont.shape[0]):
+                    eval_kernel = kernel_eval_rbf(gamma_val,float(x_i_cont[i]),x_i)
+                    predict_y = np.sum(alpha_hat.A1.T*np.array(eval_kernel))
+                    f_hat[i] = predict_y
 
-            elif loss_func == 'non_decrease':
-                cost = sum_squares(K*alpha - y) + lambda_val*quad_form(alpha,K)
-                objective = Minimize(cost)
-                constraints = [(0 <= (np.dot(D,K)*alpha))]
-                prob = Problem(objective,constraints)
-
-            result = prob.solve()
-            alpha_hat = alpha.value
-
-            f_hat = np.zeros((x_i_cont.shape))
-
-            for i in np.arange(x_i_cont.shape[0]):
-                eval_kernel = kernel_eval_rbf(gamma,float(x_i_cont[i]),x_i)
-                predict_y = np.sum(alpha_hat.A1.T*np.array(eval_kernel))
-                f_hat[i] = predict_y
-
-            plot_function(x_i,y,x_i_cont,f_x_cont,f_hat,loss_func,lambda_val,gamma)
-
-np.dot(D,np.dot(K,alpha_hat)) >= 0
+                plot_function_TV(x_i,y,x_i_cont,f_x_cont,f_hat,loss_func,lambda1_val,lambda2_val,gamma_val)

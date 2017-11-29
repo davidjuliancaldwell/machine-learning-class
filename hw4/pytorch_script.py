@@ -18,6 +18,7 @@ import seaborn as sns
 sns.set()
 
 %matplotlib inline
+%config InlineBackend.figure_format = 'svg'
 ########################################################################
 # %%
 
@@ -42,12 +43,12 @@ transform = transforms.Compose(
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                        download=False, transform=transform)
+                                        download=True, transform=transform)
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=1,
                                           shuffle=True, num_workers=2)
 
 testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                       download=False, transform=transform)
+                                       download=True, transform=transform)
 testloader = torch.utils.data.DataLoader(testset, batch_size=1,
                                          shuffle=False, num_workers=2)
 
