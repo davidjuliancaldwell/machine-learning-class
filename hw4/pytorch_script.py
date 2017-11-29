@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 import scipy
 import seaborn as sns
 sns.set()
-
+sns.set_style("white")
+%matplotlib inline
 ########################################################################
 # %%
 
@@ -84,10 +85,46 @@ class Net_simple(nn.Module):
         x = self.fc1(x)
         return x
 
+class Net_hidden(nn.Module):
+    def __init__(self,M):
+        super(Net_hidden, self).__init__()
+        self.fc1 = nn.Linear(3072, M)
+        self.fc2 = nn.Linear(M,10)
 
-net = Net_simple()
+    def forward(self, x):
+        x = x.view(-1,3072)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
 
-net
+class Net_conv(nn.Module):
+    def __init__(self,M,p,N):
+        super(Net_conv, self).__init__()
+        # input, output, square conv are order of inputs for Conv2d
+        self.conv1 = nn.Conv2d(3,M,p)
+        self.pool = nn.MaxPool2d(N,N)
+        self.fc1 = nn.Linear(int((M*((33-p)/N)**2)),int(10))
+
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = x.view(-1,int((M*((33-p)/N)**2)))
+        x = self.fc1(x)
+        return x
+
+
+#net = Net_simple()
+
+M = 200
+#net = Net_hidden(M)
+
+M = 100
+p = 5
+N = 14
+net = Net_conv(M,p,N)
+
+for idx, m in enumerate(net.modules()):
+    print(idx, '->', m)
 ########################################################################
 # 3. Define a Loss function and optimizer
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -96,7 +133,7 @@ net
 # %%
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
 
 ########################################################################
 # 4. Train the network
@@ -107,9 +144,12 @@ optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 # network and optimize
 # %%
 
-for epoch in range(2):  # loop over the dataset multiple times
+for epoch_ind,epoch in enumerate(range(5)):  # loop over the dataset multiple times
 
     running_loss = 0.0
+    iteration_vec = []
+    train_accuracy_vec = []
+    test_accuracy_vec = []
     for i, data in enumerate(trainloader, 0):
         # get the inputs
         inputs, labels = data
@@ -124,16 +164,48 @@ for epoch in range(2):  # loop over the dataset multiple times
         outputs = net(inputs)
         loss = criterion(outputs, labels)
         loss.backward()
-        print('fc1.bias.grad after backward')
-        print(net.fc1.bias.grad)
         optimizer.step()
 
         # print statistics
-        running_loss += loss.data[0]
-        if i % 2000 == 1999:    # print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 2000))
-            running_loss = 0.0
+        runningStats = False
+        if runningStats:
+            running_loss += loss.data[0]
+            if i % 2000 == 1999:    # print every 2000 mini-batches
+                print('[%d, %5d] loss: %.3f' %
+                      (epoch + 1, i + 1, running_loss / 2000))
+                running_loss = 0.0
+
+        # train classification accuracy
+    correct = 0
+    total = 0
+    print('epoch {}'.format(epoch_ind))
+    for data in trainloader:
+        images, labels = data
+        outputs = net(Variable(images))
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum()
+
+    train_accuracy_vec.append(100 * correct / total)
+    print('Accuracy of the network on the 10000 train images: %d %%' % (
+        100 * correct / total))
+
+    # test classification accuracy
+    correct = 0
+    total = 0
+    for data in testloader:
+        images, labels = data
+        outputs = net(Variable(images))
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum()
+
+    test_accuracy_vec.append(100 * correct / total)
+    iteration_vec.append(epoch_ind)
+
+
+    print('Accuracy of the network on the 10000 test images: %d %%' % (
+        100 * correct / total))
 
 print('Finished Training')
 
@@ -160,7 +232,7 @@ print('GroundTruth: ', ' '.join('%5s' % classes[labels[j]] for j in range(4)))
 
 ########################################################################
 # Okay, now let us see what the neural network thinks these examples above are:
-
+# %%
 outputs = net(Variable(images))
 
 ########################################################################
@@ -170,14 +242,14 @@ outputs = net(Variable(images))
 # So, let's get the index of the highest energy:
 _, predicted = torch.max(outputs.data, 1)
 
-print('Predicted: ', ' '.join('%5s' % classes[predicted[j]]
+print('Predicted: ', ' '.join('%5s' % classes[int(predicted[j].numpy())]
                               for j in range(4)))
-
+# %%
 ########################################################################
 # The results seem pretty good.
 #
 # Let us look at how the network performs on the whole dataset.
-
+# %%
 correct = 0
 total = 0
 for data in testloader:
