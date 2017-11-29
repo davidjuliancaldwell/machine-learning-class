@@ -17,8 +17,6 @@ import scipy
 import seaborn as sns
 sns.set()
 
-%matplotlib inline
-%config InlineBackend.figure_format = 'svg'
 ########################################################################
 # %%
 
@@ -43,13 +41,13 @@ transform = transforms.Compose(
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                        download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=1,
+                                        download=False, transform=transform)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
                                           shuffle=True, num_workers=2)
 
 testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                       download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=1,
+                                       download=False, transform=transform)
+testloader = torch.utils.data.DataLoader(testset, batch_size=4,
                                          shuffle=False, num_workers=2)
 
 classes = ('plane', 'car', 'bird', 'cat',
@@ -66,34 +64,36 @@ images, labels = dataiter.next()
 # show images
 imshow(torchvision.utils.make_grid(images))
 # print labels
-print(' '.join('%5s' % classes[labels[j]] for j in range(1)))
+print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
 
 ########################################################################
 # 2. Define a Convolution Neural Network
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 # Copy the neural network from the Neural Networks section before and modify it to
 # take 3-channel images (instead of 1-channel images as it was defined).
-
+# %%
 
 class Net_simple(nn.Module):
     def __init__(self):
         super(Net_simple, self).__init__()
-        self.fc1 = nn.Linear(10, 3072)
+        self.fc1 = nn.Linear(3072, 10)
 
 
     def forward(self, x):
-        x = x.resize(3072,1)
+        x = x.view(-1,3072)
         x = self.fc1(x)
         return x
 
 
 net = Net_simple()
 
+net
 ########################################################################
 # 3. Define a Loss function and optimizer
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 # Let's use a Classification Cross-Entropy loss and SGD with momentum
 
+# %%
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
@@ -105,6 +105,7 @@ optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 # This is when things start to get interesting.
 # We simply have to loop over our data iterator, and feed the inputs to the
 # network and optimize
+# %%
 
 for epoch in range(2):  # loop over the dataset multiple times
 
@@ -123,6 +124,8 @@ for epoch in range(2):  # loop over the dataset multiple times
         outputs = net(inputs)
         loss = criterion(outputs, labels)
         loss.backward()
+        print('fc1.bias.grad after backward')
+        print(net.fc1.bias.grad)
         optimizer.step()
 
         # print statistics
@@ -146,6 +149,7 @@ print('Finished Training')
 # correct, we add the sample to the list of correct predictions.
 #
 # Okay, first step. Let us display an image from the test set to get familiar.
+# %%
 
 dataiter = iter(testloader)
 images, labels = dataiter.next()

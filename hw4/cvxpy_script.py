@@ -1,3 +1,4 @@
+
 ########################################################################
 ### import modules
 # %%
@@ -10,9 +11,6 @@ import matplotlib.pyplot as plt
 import scipy
 import seaborn as sns
 sns.set()
-
-%matplotlib inline
-%config InlineBackend.figure_format = 'svg'
 
 
 ########################################################################
@@ -184,18 +182,19 @@ def choose_gamma(x):
     return gamma
 
 def plot_function(x,y,x_cont,f_x,f_hat,loss_func,lambda_val,gamma):
-    #plt.figure(dpi=600)
-    plt.figure()
+    plt.figure(dpi=600)
+    #plt.figure()
     plt.plot(x,y,'o',label='original data with noise')
     plt.plot(x_cont,f_x,label='true f(x)')
     plt.plot(x_cont,f_hat,label='f_hat(x)')
     plt.xlabel('x')
     plt.ylabel('f(x) or y')
-    plt.title('Data, f(x), and f_hat_x \n for loss function = {}, lambda = {},\
+    plt.title('Data, f(x), and f_hat_x \n for loss function = {}, lambda = {},\n \
         gamma = {:.2f}'.format(loss_func,lambda_val,gamma))
     plt.legend()
     plt.ylim([-5,50])
     plt.show
+    plt.savefig("hw4_prob1_func_{}".format(loss_func))
 
 def plot_function_TV(x,y,x_cont,f_x,f_hat,loss_func,lambda1_val,lambda2_val,gamma):
     #plt.figure(dpi=600)
@@ -205,13 +204,13 @@ def plot_function_TV(x,y,x_cont,f_x,f_hat,loss_func,lambda1_val,lambda2_val,gamm
     plt.plot(x_cont,f_hat,label='f_hat(x)')
     plt.xlabel('x')
     plt.ylabel('f(x) or y')
-    plt.title('Data, f(x), and f_hat_x \n for loss function = {}, lambda1 = {},\
+    plt.title('Data, f(x), and f_hat_x \n for loss function = {}, lambda1 = {},\n \
         lambda2 = {}, gamma = {:.2f}'.format(loss_func,lambda1_val,lambda2_val,gamma))
     plt.legend()
     plt.ylim([-5,50])
     plt.show
 
-    #plt.savefig('hw3_prob2_{}'.format(kernel))hy
+    plt.savefig("hw4_prob1_func_{}".format(loss_func))
 
 ########################################################################
 # %%
@@ -277,15 +276,15 @@ for i in np.arange(D.shape[0]):
 # %%
 
 ### least squares, huber, domain knowledge
-#loss_funcs = ['least_squares','huber']
-loss_funcs = ['non_decrease']
+loss_funcs = ['least_squares','huber','non_decrease']
+#loss_funcs = ['non_decrease']
 
 for loss_func in loss_funcs:
-    lambda_vec = np.array([1e-5,1e-4,1e-3,1e-2,1e-1,1,10])
+    lambda_vec = np.array([1e-5,1e-4,1e-3,1e-2,1e-1,1,10,10])
 
     gamma = choose_gamma(x_i)
 
-    gamma_vec = np.arange(gamma-10,gamma+45,5)
+    gamma_vec = np.arange(gamma-10,gamma+40,5)
 
     #loss_func = 'least_squares'
 
@@ -312,7 +311,7 @@ for loss_func in loss_funcs:
         prob = Problem(objective)
 
     elif loss_func == 'non_decrease':
-        cost = sum_squares(y - K*alpha) + lambda_val*quad_form(alpha,K)
+        cost = sum_squares(y - K*alpha) + best_lambda*quad_form(alpha,K)
         objective = Minimize(cost)
         constraints = [np.dot(D,K)*alpha >= 0]
         prob = Problem(objective,constraints)
@@ -330,9 +329,6 @@ for loss_func in loss_funcs:
 
     plot_function(x_i,y,x_i_cont,f_x_cont,f_hat,loss_func,best_lambda,best_gamma)
 
-best_lambda
-best_gamma
-plt.plot(f_hat)
 ########################################################################
 # %%
 ### TV
@@ -341,7 +337,7 @@ lambda1_vec = np.array([1e-5,1e-4,1e-3,1e-2,1e-1,1,10])
 lambda2_vec = np.array([1e-5,1e-4,1e-3,1e-2,1e-1,1,10])
 gamma = choose_gamma(x_i)
 
-gamma_vec = np.arange(gamma-10,gamma+45,5)
+gamma_vec = np.arange(gamma-10,gamma+40,5)
 
 #loss_func = 'least_squares'
 
@@ -372,14 +368,13 @@ for i in np.arange(x_i_cont.shape[0]):
     predict_y = np.sum(alpha_hat.A1.T*np.array(eval_kernel))
     f_hat[i] = predict_y
 
-f_hat.shape
 
 plot_function_TV(x_i,y,x_i_cont,f_x_cont,f_hat,loss_func,best_lambda1,best_lambda2,best_gamma)
 ########################################################################
 
 # %%
 ### plot a whole bunch
-plotMany = True
+plotMany = False
 if plotMany:
 
     #lambda_vec = [1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,10]
@@ -431,23 +426,22 @@ if plotMany:
 
 # %%
 ### plot a whole bunch of TV
-loss_func = 'total_var'
-lambda1_vec = np.array([1e-5,1e-1])
-lambda2_vec = np.array([1e-5,1e-1])
-gamma = choose_gamma(x_i)
+if plotMany:
+    loss_func = 'total_var'
+    lambda1_vec = np.array([1e-5,1e-3,1e-1,1,10,100])
+    lambda2_vec = np.array([1e-5])
+    gamma = choose_gamma(x_i)
 
-#gamma_vec = np.arange(gamma-10,gamma+30,10)
-gamma_vec = np.array([10,40])
+    #gamma_vec = np.arange(gamma-10,gamma+30,10)
+    gamma_vec = np.array([50])
 
-#loss_func = 'least_squares'
-for lambda1_val in lambda1_vec:
+    #loss_func = 'least_squares'
+    for lambda1_val in lambda1_vec:
 
-    for lambda2_val in lambda2_vec:
+        for lambda2_val in lambda2_vec:
 
-        for gamma_val in gamma_vec:
-            print('lambda1 = {},lambda2 = {},gamma = {}'.format(lambda1_val,lambda2_val,gamma_val))
-
-            for valid_ind in np.arange(y.shape[0]):
+            for gamma_val in gamma_vec:
+                print('lambda1 = {},lambda2 = {},gamma = {}'.format(lambda1_val,lambda2_val,gamma_val))
 
                 f_hat = np.zeros((x_i_cont.shape))
                 K = make_K_mat_rbf(x_i,gamma_val)
