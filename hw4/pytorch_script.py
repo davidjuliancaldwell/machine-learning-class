@@ -113,27 +113,19 @@ class Net_conv(nn.Module):
         return x
 
 
-#net = Net_simple()
+net_simple = Net_simple()
 
 M = 200
-#net = Net_hidden(M)
+net_hidden = Net_hidden(M)
 
 M = 100
 p = 5
 N = 14
-net = Net_conv(M,p,N)
+net_conv = Net_conv(M,p,N)
 
-for idx, m in enumerate(net.modules()):
-    print(idx, '->', m)
-########################################################################
-# 3. Define a Loss function and optimizer
-# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-# Let's use a Classification Cross-Entropy loss and SGD with momentum
-
-# %%
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
+net_vec = [net_simple,net_hidden,net_conv]
+#for idx, m in enumerate(net.modules()):
+#    print(idx, '->', m)
 
 ########################################################################
 # 4. Train the network
@@ -144,70 +136,82 @@ optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
 # network and optimize
 # %%
 
-for epoch_ind,epoch in enumerate(range(5)):  # loop over the dataset multiple times
+for net in net_vec:
 
-    running_loss = 0.0
-    iteration_vec = []
-    train_accuracy_vec = []
-    test_accuracy_vec = []
-    for i, data in enumerate(trainloader, 0):
-        # get the inputs
-        inputs, labels = data
+########################################################################
+# 3. Define a Loss function and optimizer
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# Let's use a Classification Cross-Entropy loss and SGD with momentum
 
-        # wrap them in Variable
-        inputs, labels = Variable(inputs), Variable(labels)
+# %%
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
+    for epoch_ind,epoch in enumerate(range(5)):  # loop over the dataset multiple times
 
-        # forward + backward + optimize
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+        running_loss = 0.0
+        iteration_vec = []
+        train_accuracy_vec = []
+        test_accuracy_vec = []
+        for i, data in enumerate(trainloader, 0):
+            # get the inputs
+            inputs, labels = data
 
-        # print statistics
-        runningStats = False
-        if runningStats:
-            running_loss += loss.data[0]
-            if i % 2000 == 1999:    # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 2000))
-                running_loss = 0.0
+            # wrap them in Variable
+            inputs, labels = Variable(inputs), Variable(labels)
 
-        # train classification accuracy
-    correct = 0
-    total = 0
-    print('epoch {}'.format(epoch_ind))
-    for data in trainloader:
-        images, labels = data
-        outputs = net(Variable(images))
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum()
+            # zero the parameter gradients
+            optimizer.zero_grad()
 
-    train_accuracy_vec.append(100 * correct / total)
-    print('Accuracy of the network on the 10000 train images: %d %%' % (
-        100 * correct / total))
+            # forward + backward + optimize
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
-    # test classification accuracy
-    correct = 0
-    total = 0
-    for data in testloader:
-        images, labels = data
-        outputs = net(Variable(images))
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum()
+            # print statistics
+            runningStats = False
+            if runningStats:
+                running_loss += loss.data[0]
+                if i % 2000 == 1999:    # print every 2000 mini-batches
+                    print('[%d, %5d] loss: %.3f' %
+                          (epoch + 1, i + 1, running_loss / 2000))
+                    running_loss = 0.0
 
-    test_accuracy_vec.append(100 * correct / total)
-    iteration_vec.append(epoch_ind)
+            # train classification accuracy
+        correct = 0
+        total = 0
+        print('epoch {}'.format(epoch_ind))
+        for data in trainloader:
+            images, labels = data
+            outputs = net(Variable(images))
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum()
+
+        train_accuracy_vec.append(100 * correct / total)
+        print('Accuracy of the network on the 10000 train images: %d %%' % (
+            100 * correct / total))
+
+        # test classification accuracy
+        correct = 0
+        total = 0
+        for data in testloader:
+            images, labels = data
+            outputs = net(Variable(images))
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum()
+
+        test_accuracy_vec.append(100 * correct / total)
+        iteration_vec.append(epoch_ind)
 
 
-    print('Accuracy of the network on the 10000 test images: %d %%' % (
-        100 * correct / total))
+        print('Accuracy of the network on the 10000 test images: %d %%' % (
+            100 * correct / total))
 
-print('Finished Training')
+    print('Finished with network {}'.format(net))
+
 
 ########################################################################
 # 5. Test the network on the test data
