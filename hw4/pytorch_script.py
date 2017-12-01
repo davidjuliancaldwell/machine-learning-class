@@ -1,6 +1,5 @@
 ########################################################################
 # %%
-
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -34,12 +33,12 @@ transform = transforms.Compose(
 trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
                                         download=False, transform=transform)
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=64,
-                                          shuffle=True, num_workers=2)
+                                          shuffle=True, num_workers=0)
 
 testset = torchvision.datasets.CIFAR10(root='./data', train=False,
                                        download=False, transform=transform)
 testloader = torch.utils.data.DataLoader(testset, batch_size=64,
-                                         shuffle=False, num_workers=2)
+                                         shuffle=False, num_workers=0)
 
 classes = ('plane', 'car', 'bird', 'cat',
            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -50,6 +49,7 @@ classes = ('plane', 'car', 'bird', 'cat',
 # Copy the neural network from the Neural Networks section before and modify it to
 # take 3-channel images (instead of 1-channel images as it was defined).
 # %%
+
 
 class Net_simple(nn.Module):
     def __init__(self):
@@ -91,8 +91,7 @@ class Net_conv(nn.Module):
         x = self.fc1(x)
         return x
 
-def run_epochs(trainLoader,testLoader,num_epochs,hyperParameter=True):
-    cuda_avail = torch.cuda.is_available()
+def run_epochs(trainLoader,testLoader,num_epochs,net,optimizer,criterion,hyperParameter=True):
 
     iteration_vec = []
     train_accuracy_vec = []
@@ -104,11 +103,7 @@ def run_epochs(trainLoader,testLoader,num_epochs,hyperParameter=True):
             # get the inputs
             inputs, labels = data
 
-            # wrap them in Variable
-            if cuda_avail:
-                inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
-            else:
-                inputs, labels = Variable(inputs), Variable(labels)
+            inputs, labels = Variable(inputs), Variable(labels)
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -125,277 +120,17 @@ def run_epochs(trainLoader,testLoader,num_epochs,hyperParameter=True):
 
         correct = 0
         total = 0
-        if not(hyperParameter):
 
-            for data in trainloader:
-                images, labels = data
-                if cuda_avail:
-                    images = Variable(images.cuda())
-                    labels = labels.cpu()
-                else:
-                    images = Variable(images)
-
-                outputs = net(images)
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                if cuda_avail:
-                    correct += (predicted.cpu() == labels).sum()
-
-                else:
-                    correct += (predicted == labels).sum()
-
-
-            train_accuracy_vec.append(100 * correct / total)
-            print('Accuracy of the network on the train images: %d %%' % (
-                100 * correct / total))
-
-            # test classification accuracy
-            correct = 0
-            total = 0
-            for data in testloader:
-                images, labels = data
-                if cuda_avail:
-                    images = Variable(images.cuda())
-                    labels = labels.cpu()
-                else:
-                    images = Variable(images)
-
-                outputs = net(images)
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                if cuda_avail:
-                    correct += (predicted.cpu() == labels).sum()
-
-                else:
-                    correct += (predicted == labels).sum()
-
-            test_accuracy_vec.append(100 * correct / total)
-            print('Accuracy of the network on the test images: %d %%' % (
-                100 * correct / total))
-
-        else:
-            # validation classification accuracy
-            correct = 0
-            total = 0
-            for data in testloader:
-                images, labels = data
-                if cuda_avail:
-                    images = Variable(images.cuda())
-                    labels = labels.cpu()
-                else:
-                    images = Variable(images)
-
-                outputs = net(images)
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                if cuda_avail:
-                    correct += (predicted.cpu() == labels).sum()
-
-                else:
-                    correct += (predicted == labels).sum()
-
-            test_accuracy_vec.append(100 * correct / total)
-            print('Accuracy of the network on the validation images: %d %%' % (
-                100 * correct / total))
-
-        iteration_vec.append(epoch+1)
-
-    if not(hyperParameter):
-        return iteration_vec,train_accuracy_vec,test_accuracy_vec
-    else:
-        return iteration_vec,test_accuracy_vec
-
-
-def run_simple_hyper(trainloader,testloader,stepSize_vec,momentum_vec,num_epochs):
-    accuracy_vec = np.zeros((stepSize_vec.shape[0],momentum_vec.shape[0]))
-
-    for i,stepSize in enumerate(stepSize_vec):
-
-        for j,momentum in enumerate(momentum_vec):
-            net= Net_simple()
-
-            if cuda_avail:
-                net.cuda()
-
-            criterion = nn.CrossEntropyLoss()
-            optimizer = optim.SGD(net.parameters(), lr=stepSize, momentum=momentum)
-            iteration_vec,validation_accuracy_vec = run_epochs(trainloader,testloader,num_epochs,hyperParameter=True)
-
-            accuracy_vec[i][j] = validation_accuracy_vec[-1]
-            print('stepSize: {}, momentum: {}'.format(stepSize,momentum))
-
-
-    return accuracy_vec
-
-def run_hidden_hyper(trainloader,testloader,stepSize_vec,momentum_vec,M_vec,num_epochs):
-    accuracy_vec = np.zeros((stepSize_vec.shape[0],momentum_vec.shape[0],M_vec.shape[0]))
-
-    for M in M_vec:
-        M = int(M)
-        for i,stepSize in enumerate(stepSize_vec):
-
-            for j,momentum in enumerate(momentum_vec):
-                net = Net_hidden(M)
-                if cuda_avail:
-                    net.cuda()
-                criterion = nn.CrossEntropyLoss()
-
-
-                optimizer = optim.SGD(net.parameters(), lr=stepSize, momentum=momentum)
-                iteration_vec,validation_accuracy_vec = run_epochs(trainloader,testloader,num_epochs,hyperParameter=True)
-
-                accuracy_vec[i][j] = validation_accuracy_vec[-1]
-                print('M: {}, stepSize: {}, momentum: {}'.format(M,stepSize,momentum))
-
-    return accuracy_vec
-
-def run_conv_hyper(trainloader,testloader,stepSize_vec,momentum_vec,M_vec,p_vec,N_vec,num_epochs):
-    accuracy_vec = np.zeros((stepSize_vec.shape[0],momentum_vec.shape[0],M_vec.shape[0],p_vec.shape[0],N_vec.shape[0]))
-
-    for M in M_vec:
-        M = int(M)
-
-        for p in p_vec:
-            p = int(p)
-
-            for N in N_vec:
-                N = int(N)
-                for i,stepSize in enumerate(stepSize_vec):
-
-                    for j,momentum in enumerate(momentum_vec):
-                        net = Net_conv(M,p,N)
-                        if cuda_avail:
-                            net.cuda()
-
-                        criterion = nn.CrossEntropyLoss()
-
-                        optimizer = optim.SGD(net.parameters(), lr=stepSize, momentum=momentum)
-                        iteration_vec,validation_accuracy_vec = run_epochs(trainloader,testloader,num_epochs,hyperParameter=True)
-
-                        accuracy_vec[i][j] = validation_accuracy_vec[-1]
-                        print('M: {}, p: {}, N: {},stepSize: {}, momentum: {}'.format(M,p,N,stepSize,momentum))
-    return accuracy_vec
-########################################################################
-# %%
-# CROSS VALIDATE!!!
-num_epochs = 2
-# simple
-
-stepSize_vec = np.array([0.01,0.1])
-momentum_vec = np.array([0.1,0.5,0.9])
-
-accuracy_vec_simple = run_simple_hyper(trainloader,testloader,stepSize_vec,momentum_vec,num_epochs)
-b_ind_simp = np.unravel_index(accuracy_vec_simple.argmax(), accuracy_vec_simple.shape)
-b_step_simp = stepSize_vec[b_ind_simp[0]]
-b_momentum_simp = momentum_vec[b_ind_simp[1]]
-# %%
-# hidden layer
-M_vec = np.array([100,200,300])
-accuracy_vec_hidden = run_hidden_hyper(trainloader,testloader,stepSize_vec,momentum_vec,M_vec,num_epochs)
-b_ind_hid = np.unravel_index(accuracy_vec_hidden.argmax(), accuracy_vec_hidden.shape)
-b_M_hid = M_vec[b_ind_hid[0]]
-b_step_hid = stepSize_vec[b_ind_hid[1]]
-b_momentum_hid = momentum_vec[b_ind_hid[2]]
-
-# %%
-# convolution
-p_vec = np.array([3,5,7])
-N_vec = np.array([10,14,18])
-accuracy_vec_conv = run_conv_hyper(trainloader,testloader,stepSize_vec,momentum_vec,M_vec,p_vec,N_vec,num_epochs)
-b_ind_conv = np.unravel_index(accuracy_vec_conv.argmax(), accuracy_vec_conv.shape)
-b_M_conv = M_vec[b_ind_conv[0]]
-b_p_conv = p_vec[b_ind_conv[1]]
-b_N_conv = N_vec[b_ind_conv[2]]
-b_step_hid = stepSize_vec[b_ind_conv[3]]
-b_momentum_hid = momentum_vec[b_ind_conv[4]]
-
-####################################################################
-
-# train and test with the hyperparameters
-# %%
-net_simple = Net_simple()
-if cuda_avail:
-    net_simple.cuda()
-
-M_hidden = 200
-net_hidden = Net_hidden(M_hidden)
-if cuda_avail:
-    net_hidden.cuda()
-
-M_conv = 100
-p_conv = 5
-N_conv = 14
-net_conv = Net_conv(M_conv,p_conv,N_conv)
-if cuda_avail:
-    net_conv.cuda()
-
-
-net_vec = [net_simple,net_hidden,net_conv]
-
-num_epochs = 3
-net_vec = [net_conv]
-for net in net_vec:
-
-    print('Beginning network {}'.format(net))
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
-    iteration_vec = []
-    train_accuracy_vec = []
-    test_accuracy_vec = []
-    for epoch in range(num_epochs):  # loop over the dataset multiple times
-
-        running_loss = 0.0
-
-        for i, data in enumerate(trainloader, 0):
-            # get the inputs
-            inputs, labels = data
-
-            # wrap them in Variable
-            if cuda_avail:
-                inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
-            else:
-                inputs, labels = Variable(inputs), Variable(labels)
-
-            # zero the parameter gradients
-            optimizer.zero_grad()
-
-            # forward + backward + optimize
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            # print statistics
-            runningStats = True
-            if runningStats:
-                running_loss += loss.data[0]
-                if i % 2000 == 1999:    # print every 2000 mini-batches
-                    print('[%d, %5d] loss: %.3f' %
-                          (epoch + 1, i + 1, running_loss / 2000))
-                    running_loss = 0.0
-
-            # train classification accuracy
-        print('epoch {}'.format(epoch+1))
-
-        correct = 0
-        total = 0
         for data in trainloader:
             images, labels = data
-            if cuda_avail:
-                images = Variable(images.cuda())
-                labels = labels.cpu()
-            else:
-                images = Variable(images)
+
+            images = Variable(images)
 
             outputs = net(images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
-            if cuda_avail:
-                correct += (predicted.cpu() == labels).sum()
 
-            else:
-                correct += (predicted == labels).sum()
+            correct += (predicted == labels).sum()
 
 
         train_accuracy_vec.append(100 * correct / total)
@@ -407,27 +142,163 @@ for net in net_vec:
         total = 0
         for data in testloader:
             images, labels = data
-            if cuda_avail:
-                images = Variable(images.cuda())
-                labels = labels.cpu()
-            else:
-                images = Variable(images)
+
+            images = Variable(images)
 
             outputs = net(images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
-            if cuda_avail:
-                correct += (predicted.cpu() == labels).sum()
-
-            else:
-                correct += (predicted == labels).sum()
+            correct += (predicted == labels).sum()
 
         test_accuracy_vec.append(100 * correct / total)
-        iteration_vec.append(epoch+1)
-
-
         print('Accuracy of the network on the test images: %d %%' % (
             100 * correct / total))
+
+        iteration_vec.append(epoch+1)
+
+    return iteration_vec,train_accuracy_vec,test_accuracy_vec
+
+
+def run_simple_hyper(trainloader,testloader,stepSize_vec,momentum_vec,num_epochs):
+    accuracy_vec = np.zeros((stepSize_vec.shape[0],momentum_vec.shape[0]))
+
+    for i,stepSize in enumerate(stepSize_vec):
+
+        for j,momentum in enumerate(momentum_vec):
+            if 'net' in globals() or 'net' in locals():
+                del net
+                del optimizer
+                del criterion
+
+            net= Net_simple()
+            print('stepSize: {}, momentum: {}'.format(stepSize,momentum))
+
+            criterion = nn.CrossEntropyLoss()
+            optimizer = optim.SGD(net.parameters(), lr=stepSize, momentum=momentum)
+            iteration_vec,train_accuracy_vec,test_accuracy_vec = run_epochs(trainloader,testloader,num_epochs,net,optimizer,criterion,hyperParameter=True)
+
+            accuracy_vec[i,j] = test_accuracy_vec[-1]
+
+    return accuracy_vec
+
+def run_hidden_hyper(trainloader,testloader,stepSize_vec,momentum_vec,M_vec,num_epochs):
+    accuracy_vec = np.zeros((M_vec.shape[0],stepSize_vec.shape[0],momentum_vec.shape[0]))
+
+    for i,M in enumerate(M_vec):
+        M = int(M)
+        for j,stepSize in enumerate(stepSize_vec):
+
+            for k,momentum in enumerate(momentum_vec):
+                if 'net' in globals() or 'net' in locals():
+                    del net
+                    del optimizer
+                    del criterion
+
+                net = Net_hidden(M)
+
+                print('M: {}, stepSize: {}, momentum: {}'.format(M,stepSize,momentum))
+
+                criterion = nn.CrossEntropyLoss()
+
+
+                optimizer = optim.SGD(net.parameters(), lr=stepSize, momentum=momentum)
+                iteration_vec,train_accuracy_vec,test_accuracy_vec = run_epochs(trainloader,testloader,num_epochs,net,optimizer,criterion,hyperParameter=True)
+                accuracy_vec[i,j,k] = test_accuracy_vec[-1]
+
+    return accuracy_vec
+
+def run_conv_hyper(trainloader,testloader,stepSize_vec,momentum_vec,M_vec,p_vec,N_vec,num_epochs):
+    accuracy_vec = np.zeros((M_vec.shape[0],N_vec.shape[0],stepSize_vec.shape[0],momentum_vec.shape[0]))
+
+    for i,M in enumerate(M_vec):
+        M = int(M)
+
+        for j, (p,N) in enumerate(list(zip(p_vec,N_vec))):
+            p = int(p)
+            N = int(N)
+            for k,stepSize in enumerate(stepSize_vec):
+
+                for l,momentum in enumerate(momentum_vec):
+                    if 'net' in globals() or 'net' in locals():
+                        del net
+                        del optimizer
+                        del criterion
+
+                    net = Net_conv(M,p,N)
+                    print('M: {}, p: {}, N: {},stepSize: {}, momentum: {}'.format(M,p,N,stepSize,momentum))
+
+                    criterion = nn.CrossEntropyLoss()
+
+                    optimizer = optim.SGD(net.parameters(), lr=stepSize, momentum=momentum)
+                    iteration_vec,train_accuracy_vec,test_accuracy_vec = run_epochs(trainloader,testloader,num_epochs,net,optimizer,criterion,hyperParameter=True)
+
+                    accuracy_vec[i,j,k,l] = test_accuracy_vec[-1]
+
+    return accuracy_vec
+########################################################################
+# %%
+# CROSS VALIDATE!!!
+num_epochs = 12
+# simple
+
+stepSize_vec = np.array([0.001,0.01])
+momentum_vec = np.array([0.1,0.5,0.9])
+
+test_vec_simple = run_simple_hyper(trainloader,testloader,stepSize_vec,momentum_vec,num_epochs)
+b_ind_simp = np.unravel_index(test_vec_simple.argmax(), test_vec_simple.shape)
+b_step_simp = stepSize_vec[b_ind_simp[0]]
+b_momentum_simp = momentum_vec[b_ind_simp[1]]
+# %%
+# hidden layer
+M_vec = np.array([100,200,300])
+test_vec_hidden = run_hidden_hyper(trainloader,testloader,stepSize_vec,momentum_vec,M_vec,num_epochs)
+b_ind_hid = np.unravel_index(test_vec_hidden.argmax(), test_vec_hidden.shape)
+b_M_hid = M_vec[b_ind_hid[0]]
+b_step_hid = stepSize_vec[b_ind_hid[1]]
+b_momentum_hid = momentum_vec[b_ind_hid[2]]
+# %%
+
+# convolution
+p_vec = np.array([3,3,5,5,5,7])
+N_vec = np.array([5,10,4,7,14,13])
+test_vec_conv = run_conv_hyper(trainloader,testloader,stepSize_vec,momentum_vec,M_vec,p_vec,N_vec,num_epochs)
+b_ind_conv = np.unravel_index(test_vec_conv.argmax(), test_vec_conv.shape)
+b_M_conv = M_vec[b_ind_conv[0]]
+b_p_conv = p_vec[b_ind_conv[1]]
+b_N_conv = N_vec[b_ind_conv[2]]
+b_step_conv = stepSize_vec[b_ind_conv[3]]
+b_momentum_conv = momentum_vec[b_ind_conv[4]]
+####################################################################
+
+# train and test with the hyperparameters
+# %%
+net_simple = Net_simple()
+
+M_hidden = int(b_M_hid)
+net_hidden = Net_hidden(M_hidden)
+
+M_conv = int(b_M_conv)
+p_conv = int(b_p_conv)
+N_conv = int(b_N_conv)
+net_conv = Net_conv(M_conv,p_conv,N_conv)
+
+net_vec = [net_simple,net_hidden,net_conv]
+
+lr_vec = [b_step_simp,b_step_hidden,b_step_conv]
+momentum_vec = [b_momentum_simp,b_momentum_hid,b_momentum_conv]
+
+num_epochs = 12
+train_array = []
+test_array = []
+for netind,net in enumerate(net_vec):
+
+    print('Beginning network {}'.format(net))
+
+    criterion = nn.CrossEntropyLoss()
+    stepSize = lr_vec[netind]
+    momentum = momentum_vec[netind]
+    optimizer = optim.SGD(net.parameters(), lr=stepSize, momentum=momentum)
+    iteration_vec,train_accuracy_vec,test_accuracy_vec = run_epochs(trainloader,testloader,num_epochs,net,optimizer,criterion,hyperParameter=True)
 
     print('Finished with network {}'.format(net))
 
@@ -438,6 +309,9 @@ for net in net_vec:
     plt.plot(iteration_vec,test_accuracy_vec,label='testing')
     plt.title('{}'.format(net))
     plt.legend()
+
+    train_array.append(train_accuracy_vec)
+    test_array.append(test_accuracy_vec)
 
 
 
