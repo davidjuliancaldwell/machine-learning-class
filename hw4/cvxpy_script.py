@@ -81,7 +81,7 @@ def LOOCV_rbf(x,y,lambda_vec,gamma_vec,loss_func,D):
 
 
             score = (1/len(score_ind))*np.sum(score_ind)
-            cost_vec[lambda_iter][gamma_iter] = score
+            cost_vec[lambda_iter,gamma_iter] = score
 
     return cost_vec
 
@@ -132,7 +132,7 @@ def LOOCV_rbf_TV(x,y,D,lambda1_vec,lambda2_vec,gamma_vec):
 
 
                 score = (1/len(score_ind))*np.sum(score_ind)
-                cost_vec[lambda1_iter][lambda2_iter][gamma_iter] = score
+                cost_vec[lambda1_iter,lambda2_iter,gamma_iter] = score
 
     return cost_vec
 
@@ -193,12 +193,12 @@ def plot_function(x,y,x_cont,f_x,f_hat,loss_func,lambda_val,gamma):
         gamma = {:.2f}'.format(loss_func,lambda_val,gamma))
     plt.legend()
     plt.ylim([-5,50])
-    plt.show
+    #plt.show
     plt.savefig("hw4_prob1_func_{}".format(loss_func))
 
 def plot_function_TV(x,y,x_cont,f_x,f_hat,loss_func,lambda1_val,lambda2_val,gamma):
-    #plt.figure(dpi=600)
-    plt.figure()
+    plt.figure(dpi=600)
+    #plt.figure()
     plt.plot(x,y,'o',label='original data with noise')
     plt.plot(x_cont,f_x,label='true f(x)')
     plt.plot(x_cont,f_hat,label='f_hat(x)')
@@ -208,7 +208,7 @@ def plot_function_TV(x,y,x_cont,f_x,f_hat,loss_func,lambda1_val,lambda2_val,gamm
         lambda2 = {}, gamma = {:.2f}'.format(loss_func,lambda1_val,lambda2_val,gamma))
     plt.legend()
     plt.ylim([-5,50])
-    plt.show
+    #plt.show
 
     plt.savefig("hw4_prob1_func_{}".format(loss_func))
 
@@ -280,12 +280,11 @@ loss_funcs = ['least_squares','huber','non_decrease']
 #loss_funcs = ['non_decrease']
 
 for loss_func in loss_funcs:
-    lambda_vec = np.array([1e-5,1e-4,1e-3,1e-2,1e-1,1,10,10])
+    lambda_vec = np.array([1e-5,1e-4,1e-3,1e-2,1e-1,1,10])
 
     gamma = choose_gamma(x_i)
 
     gamma_vec = np.arange(gamma-10,gamma+40,5)
-
     #loss_func = 'least_squares'
 
     score_vec = LOOCV_rbf(x_i,y,lambda_vec,gamma_vec,loss_func,D_LOOCV)

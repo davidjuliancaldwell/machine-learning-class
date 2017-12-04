@@ -262,34 +262,39 @@ b_momentum_hid = momentum_vec[b_ind_hid[2]]
 p_vec = np.array([3,3,5,5,5,7])
 N_vec = np.array([5,10,4,7,14,13])
 test_vec_conv = run_conv_hyper(trainloader,testloader,stepSize_vec,momentum_vec,M_vec,p_vec,N_vec,num_epochs)
+
+# %%
+
+
 b_ind_conv = np.unravel_index(test_vec_conv.argmax(), test_vec_conv.shape)
 b_M_conv = M_vec[b_ind_conv[0]]
 b_p_conv = p_vec[b_ind_conv[1]]
-b_N_conv = N_vec[b_ind_conv[2]]
-b_step_conv = stepSize_vec[b_ind_conv[3]]
-b_momentum_conv = momentum_vec[b_ind_conv[4]]
+b_N_conv = N_vec[b_ind_conv[1]]
+b_step_conv = stepSize_vec[b_ind_conv[2]]
+b_momentum_conv = momentum_vec[b_ind_conv[3]]
 ####################################################################
 
 # train and test with the hyperparameters
 # %%
 net_simple = Net_simple()
 
-M_hidden = int(b_M_hid)
-net_hidden = Net_hidden(M_hidden)
+M_hid = int(b_M_hid)
+net_hid = Net_hidden(M_hid)
 
 M_conv = int(b_M_conv)
 p_conv = int(b_p_conv)
 N_conv = int(b_N_conv)
 net_conv = Net_conv(M_conv,p_conv,N_conv)
 
-net_vec = [net_simple,net_hidden,net_conv]
+net_vec = [net_simple,net_hid,net_conv]
 
-lr_vec = [b_step_simp,b_step_hidden,b_step_conv]
+lr_vec = [b_step_simp,b_step_hid,b_step_conv]
 momentum_vec = [b_momentum_simp,b_momentum_hid,b_momentum_conv]
 
 num_epochs = 12
 train_array = []
 test_array = []
+net_names = ['Simple Logistic Regression','One hidden layer','Convolutional and Pooling Layers']
 for netind,net in enumerate(net_vec):
 
     print('Beginning network {}'.format(net))
@@ -303,16 +308,24 @@ for netind,net in enumerate(net_vec):
     print('Finished with network {}'.format(net))
 
     plt.figure(dpi=600)
-    plt.xlabel('iteration')
+
+    plt.xlabel('epoch')
     plt.ylabel('Accuracy')
     plt.plot(iteration_vec,train_accuracy_vec,label='training')
     plt.plot(iteration_vec,test_accuracy_vec,label='testing')
-    plt.title('{}'.format(net))
+    plt.title('{}'.format(net_names[netind]))
+    plt.ylim([0,100])
     plt.legend()
-
-    train_array.append(train_accuracy_vec)
-    test_array.append(test_accuracy_vec)
-
-
+    plt.savefig('hw4_neural_net_{}'.format(netind))
 
 ########################################################################
+
+print('for the simple logistic regression network, the best value for the step size was {},\
+ the best value for the momentum was {}'.format(b_step_simp,b_momentum_simp))
+
+print('for the network with one hidden layer, the best value for the step size was {},\
+ while the best value for the momentum was {}, the best value for M was {}'.format(b_step_hid,b_momentum_hid,b_M_hid))
+
+print('for the network with a convolutional layer, the best value for the step size was {},\
+ while the best value for the momentum was {}, the best value for M was {}, \
+ the best value for p was {}, the best value for N was {} '.format(b_step_conv,b_momentum_conv,b_M_conv,b_p_conv,b_N_conv))
