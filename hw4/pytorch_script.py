@@ -262,10 +262,6 @@ b_momentum_hid = momentum_vec[b_ind_hid[2]]
 p_vec = np.array([3,3,5,5,5,7])
 N_vec = np.array([5,10,4,7,14,13])
 test_vec_conv = run_conv_hyper(trainloader,testloader,stepSize_vec,momentum_vec,M_vec,p_vec,N_vec,num_epochs)
-
-# %%
-
-
 b_ind_conv = np.unravel_index(test_vec_conv.argmax(), test_vec_conv.shape)
 b_M_conv = M_vec[b_ind_conv[0]]
 b_p_conv = p_vec[b_ind_conv[1]]
@@ -273,6 +269,7 @@ b_N_conv = N_vec[b_ind_conv[1]]
 b_step_conv = stepSize_vec[b_ind_conv[2]]
 b_momentum_conv = momentum_vec[b_ind_conv[3]]
 ####################################################################
+b_ind_conv
 
 # train and test with the hyperparameters
 # %%
